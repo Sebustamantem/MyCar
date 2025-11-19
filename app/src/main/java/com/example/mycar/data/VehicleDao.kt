@@ -1,21 +1,19 @@
 package com.example.mycar.data
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.Query
+import androidx.room.*
 
 @Dao
 interface VehicleDao {
 
-    // Insertar un vehículo
-    @Insert
-    suspend fun insert(vehicle: VehicleEntity)
+    @Query("SELECT * FROM vehicles WHERE ownerEmail = :email")
+    fun getAllByEmail(email: String): List<VehicleEntity>
 
-    //  Eliminar vehículo por patente (clave única)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insert(vehicle: VehicleEntity)
+
     @Query("DELETE FROM vehicles WHERE plate = :plate")
-    suspend fun deleteByPlate(plate: String)
+    fun deleteByPlate(plate: String)
 
-    // Obtener todos los vehículos registrados
-    @Query("SELECT * FROM vehicles")
-    suspend fun getAll(): List<VehicleEntity>
+    @Query("DELETE FROM vehicles")
+    fun clear()
 }

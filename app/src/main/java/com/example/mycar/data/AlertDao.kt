@@ -5,12 +5,15 @@ import androidx.room.*
 @Dao
 interface AlertDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(alert: AlertEntity)
-
     @Query("SELECT * FROM alerts ORDER BY id DESC")
-    suspend fun getAll(): List<AlertEntity>
+    fun getAll(): List<AlertEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insert(alert: AlertEntity)
 
     @Query("DELETE FROM alerts WHERE id = :alertId")
-    suspend fun deleteById(alertId: Int)
+    fun deleteById(alertId: Long)
+
+    @Query("DELETE FROM alerts")
+    fun clear()
 }

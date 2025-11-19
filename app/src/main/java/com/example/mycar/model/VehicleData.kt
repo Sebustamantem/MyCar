@@ -1,4 +1,4 @@
-package com.example.mycar
+package com.example.mycar.model
 
 data class VehicleData(
     val brand: String,

@@ -5,6 +5,10 @@
     <!-- Permisos de cámara -->
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <!-- Permiso de Internet -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+
     <!-- Característica opcional de cámara -->
     <uses-feature
         android:name="android.hardware.camera"
