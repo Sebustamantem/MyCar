@@ -1,9 +1,10 @@
-package com.example.mycar
+package com.example.mycar.model
 
 data class MaintenanceRecord(
-    val vehiclePlate: String,
+    val id: Long,
     val type: String,
+    val vehiclePlate: String,
     val date: String,
-    val km: String,
+    val km: Int,
     val notes: String
 )

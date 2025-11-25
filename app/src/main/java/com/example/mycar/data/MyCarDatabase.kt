@@ -7,13 +7,16 @@ import androidx.room.RoomDatabase
     entities = [
         UserEntity::class,
         VehicleEntity::class,
-        AlertEntity::class
+        AlertEntity::class,
+        MaintenanceEntity::class     // <--- AGREGADO
     ],
-    version = 1
+    version = 4,
+    exportSchema = false
 )
 abstract class MyCarDatabase : RoomDatabase() {
 
     abstract fun userDao(): UserDao
     abstract fun vehicleDao(): VehicleDao
     abstract fun alertDao(): AlertDao
+    abstract fun maintenanceDao(): MaintenanceDao   // <--- AGREGADO
 }

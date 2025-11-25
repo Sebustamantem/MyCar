@@ -1,18 +1,17 @@
 package com.example.mycar.repository
 
-import com.example.mycar.network.RetrofitClient
+import com.example.mycar.network.RetrofitInstance
 import com.example.mycar.network.dto.AlertRequest
-import com.example.mycar.network.dto.AlertResponse
 
 class AlertRepository {
 
-    private val api = RetrofitClient.apiAlerts
+    private val api = RetrofitInstance.api
 
-    suspend fun getAlerts(email: String): List<AlertResponse> =
+    suspend fun getAlerts(email: String) =
         api.getAlerts(email)
 
-    suspend fun addAlert(request: AlertRequest): AlertResponse =
-        api.addAlert(request)
+    suspend fun addAlert(req: AlertRequest) =
+        api.addAlert(req)
 
     suspend fun deleteAlert(id: Long) =
         api.deleteAlert(id)

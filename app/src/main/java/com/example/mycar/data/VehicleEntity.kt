@@ -5,12 +5,12 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "vehicles")
 data class VehicleEntity(
-    @PrimaryKey val plate: String, // la patente es única
+    @PrimaryKey val plate: String,
     val ownerEmail: String,
     val brand: String,
     val model: String,
     val year: Int,
-    val km: String,
+    val km: Int,
     val soapDate: String,
     val permisoCirculacionDate: String,
     val revisionTecnicaDate: String

@@ -5,7 +5,7 @@ data class VehicleData(
     val model: String,
     val year: Int,
     val plate: String,
-    val km: String,
+    val km: Int,
     val soapDate: String,
     val permisoCirculacionDate: String,
     val revisionTecnicaDate: String

@@ -21,7 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.mycar.UserViewModel
-import com.example.mycar.VehicleData
+import com.example.mycar.model.VehicleData
 import com.example.mycar.components.*
 import com.example.mycar.ui.theme.*
 import java.text.SimpleDateFormat
@@ -39,7 +39,7 @@ fun ManageVehicleScreen(
     val backgroundGradient = Brush.verticalGradient(listOf(MyCarLightBlue, Color.White))
     val cardColor = Color.White
 
-    // Guardan el estado al rotar
+    // Estados del formulario
     var brand by rememberSaveable { mutableStateOf("") }
     var model by rememberSaveable { mutableStateOf("") }
     var year by rememberSaveable { mutableStateOf("") }
@@ -50,24 +50,24 @@ fun ManageVehicleScreen(
     var permisoDate by rememberSaveable { mutableStateOf("") }
     var revisionDate by rememberSaveable { mutableStateOf("") }
 
-    var message by rememberSaveable { mutableStateOf("") }
-    var isSuccess by rememberSaveable { mutableStateOf(false) }
-
     var showDeleteDialog by remember { mutableStateOf(false) }
     var vehicleToDelete by remember { mutableStateOf<VehicleData?>(null) }
+
+    var message by remember { mutableStateOf("") }
+    var isSuccess by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { userViewModel.loadVehicles() }
 
     val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
     val calendar = Calendar.getInstance()
 
-    fun openDatePicker(onDateSelected: (String) -> Unit) {
+    fun openDatePicker(onSelected: (String) -> Unit) {
         val dialog = DatePickerDialog(
             context,
-            { _, year, month, day ->
+            { _, y, m, d ->
                 val selected = Calendar.getInstance()
-                selected.set(year, month, day)
-                onDateSelected(dateFormat.format(selected.time))
+                selected.set(y, m, d)
+                onSelected(dateFormat.format(selected.time))
             },
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
@@ -76,17 +76,15 @@ fun ManageVehicleScreen(
         dialog.show()
     }
 
-    // Listas para selección
-    val brandList = listOf(
-        "Toyota", "Chevrolet", "Hyundai", "Ford", "Kia", "Nissan", "Volkswagen", "Peugeot"
-    )
+    // LISTAS
+    val brandList = listOf("Toyota", "Chevrolet", "Hyundai", "Ford", "Kia", "Nissan", "Volkswagen", "Peugeot")
     val modelMap = mapOf(
         "Toyota" to listOf("Yaris", "Corolla", "Hilux", "Rav4"),
-        "Chevrolet" to listOf("Spark", "Onix", "Cruze", "Tracker", "S10"),
-        "Hyundai" to listOf("Accent", "Elantra", "Tucson", "Santa Fe"),
+        "Chevrolet" to listOf("Spark", "Onix", "Cruze", "Tracker"),
+        "Hyundai" to listOf("Accent", "Tucson", "Elantra", "Santa Fe"),
         "Ford" to listOf("Fiesta", "Focus", "Ranger", "Ecosport"),
         "Kia" to listOf("Rio", "Cerato", "Sportage", "Sorento"),
-        "Nissan" to listOf("Versa", "Sentra", "Navara", "Kicks"),
+        "Nissan" to listOf("Versa", "Sentra", "Kicks", "Navara"),
         "Volkswagen" to listOf("Gol", "Polo", "Tiguan", "Amarok"),
         "Peugeot" to listOf("208", "3008", "2008", "Partner")
     )
@@ -103,7 +101,7 @@ fun ManageVehicleScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Encabezado
+
             ScreenHeader(
                 title = "Gestión de Vehículos",
                 onBack = {
@@ -125,30 +123,30 @@ fun ManageVehicleScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
 
                     // Marca
-                    var expandedBrand by remember { mutableStateOf(false) }
+                    var expBrand by remember { mutableStateOf(false) }
                     ExposedDropdownMenuBox(
-                        expanded = expandedBrand,
-                        onExpandedChange = { expandedBrand = !expandedBrand }
+                        expanded = expBrand,
+                        onExpandedChange = { expBrand = !expBrand }
                     ) {
                         OutlinedTextField(
                             value = brand,
                             onValueChange = {},
-                            label = { Text("Marca") },
                             readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedBrand) },
+                            label = { Text("Marca") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expBrand) },
                             modifier = Modifier.menuAnchor().fillMaxWidth()
                         )
                         ExposedDropdownMenu(
-                            expanded = expandedBrand,
-                            onDismissRequest = { expandedBrand = false }
+                            expanded = expBrand,
+                            onDismissRequest = { expBrand = false }
                         ) {
-                            brandList.forEach {
+                            brandList.forEach { b ->
                                 DropdownMenuItem(
-                                    text = { Text(it) },
+                                    text = { Text(b) },
                                     onClick = {
-                                        brand = it
+                                        brand = b
                                         model = ""
-                                        expandedBrand = false
+                                        expBrand = false
                                     }
                                 )
                             }
@@ -158,31 +156,32 @@ fun ManageVehicleScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     // Modelo
-                    var expandedModel by remember { mutableStateOf(false) }
+                    var expModel by remember { mutableStateOf(false) }
                     val models = modelMap[brand] ?: emptyList()
+
                     ExposedDropdownMenuBox(
-                        expanded = expandedModel,
-                        onExpandedChange = { expandedModel = !expandedModel }
+                        expanded = expModel,
+                        onExpandedChange = { expModel = !expModel }
                     ) {
                         OutlinedTextField(
                             value = model,
                             onValueChange = {},
-                            label = { Text("Modelo") },
                             readOnly = true,
                             enabled = brand.isNotEmpty(),
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedModel) },
+                            label = { Text("Modelo") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expModel) },
                             modifier = Modifier.menuAnchor().fillMaxWidth()
                         )
                         ExposedDropdownMenu(
-                            expanded = expandedModel,
-                            onDismissRequest = { expandedModel = false }
+                            expanded = expModel,
+                            onDismissRequest = { expModel = false }
                         ) {
-                            models.forEach {
+                            models.forEach { m ->
                                 DropdownMenuItem(
-                                    text = { Text(it) },
+                                    text = { Text(m) },
                                     onClick = {
-                                        model = it
-                                        expandedModel = false
+                                        model = m
+                                        expModel = false
                                     }
                                 )
                             }
@@ -192,29 +191,29 @@ fun ManageVehicleScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     // Año
-                    var expandedYear by remember { mutableStateOf(false) }
+                    var expYear by remember { mutableStateOf(false) }
                     ExposedDropdownMenuBox(
-                        expanded = expandedYear,
-                        onExpandedChange = { expandedYear = !expandedYear }
+                        expanded = expYear,
+                        onExpandedChange = { expYear = !expYear }
                     ) {
                         OutlinedTextField(
                             value = year,
                             onValueChange = {},
-                            label = { Text("Año") },
                             readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedYear) },
+                            label = { Text("Año") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expYear) },
                             modifier = Modifier.menuAnchor().fillMaxWidth()
                         )
                         ExposedDropdownMenu(
-                            expanded = expandedYear,
-                            onDismissRequest = { expandedYear = false }
+                            expanded = expYear,
+                            onDismissRequest = { expYear = false }
                         ) {
-                            yearList.forEach {
+                            yearList.forEach { y ->
                                 DropdownMenuItem(
-                                    text = { Text(it.toString()) },
+                                    text = { Text(y.toString()) },
                                     onClick = {
-                                        year = it.toString()
-                                        expandedYear = false
+                                        year = y.toString()
+                                        expYear = false
                                     }
                                 )
                             }
@@ -223,23 +222,23 @@ fun ManageVehicleScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    MyCarTextField(value = plate, onValueChange = { plate = it }, label = "Patente")
+                    MyCarTextField(plate, { plate = it }, "Patente")
                     Spacer(modifier = Modifier.height(8.dp))
-                    MyCarTextField(value = km, onValueChange = { km = it }, label = "Kilometraje")
+                    MyCarTextField(km, { km = it }, "Kilometraje")
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Fechas
+                    // SOAP
                     OutlinedTextField(
                         value = soapDate,
                         onValueChange = {},
-                        label = { Text("Fecha SOAP") },
                         readOnly = true,
                         trailingIcon = {
                             TextButton(onClick = { openDatePicker { soapDate = it } }) {
                                 Text("Seleccionar")
                             }
                         },
+                        label = { Text("SOAP") },
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -248,13 +247,13 @@ fun ManageVehicleScreen(
                     OutlinedTextField(
                         value = permisoDate,
                         onValueChange = {},
-                        label = { Text("Permiso de Circulación") },
                         readOnly = true,
                         trailingIcon = {
                             TextButton(onClick = { openDatePicker { permisoDate = it } }) {
                                 Text("Seleccionar")
                             }
                         },
+                        label = { Text("Permiso de Circulación") },
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -263,58 +262,56 @@ fun ManageVehicleScreen(
                     OutlinedTextField(
                         value = revisionDate,
                         onValueChange = {},
-                        label = { Text("Revisión Técnica") },
                         readOnly = true,
                         trailingIcon = {
                             TextButton(onClick = { openDatePicker { revisionDate = it } }) {
                                 Text("Seleccionar")
                             }
                         },
+                        label = { Text("Revisión Técnica") },
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Agregar vehículo
                     MyCarButton(text = "Agregar vehículo", icon = Icons.Filled.Add) {
-                        if (brand.isNotBlank() && model.isNotBlank() && year.isNotBlank() &&
-                            plate.isNotBlank() && km.isNotBlank() &&
-                            soapDate.isNotBlank() && permisoDate.isNotBlank() && revisionDate.isNotBlank()
+
+                        if (
+                            brand.isNotBlank() &&
+                            model.isNotBlank() &&
+                            year.isNotBlank() &&
+                            plate.isNotBlank() &&
+                            km.isNotBlank() &&
+                            soapDate.isNotBlank() &&
+                            permisoDate.isNotBlank() &&
+                            revisionDate.isNotBlank()
                         ) {
+
                             val newVehicle = VehicleData(
                                 brand = brand,
                                 model = model,
-                                year = year.toIntOrNull() ?: 0,
+                                year = year.toInt(),
                                 plate = plate,
-                                km = km,
+                                km = km.toIntOrNull() ?: 0,
                                 soapDate = soapDate,
                                 permisoCirculacionDate = permisoDate,
                                 revisionTecnicaDate = revisionDate
                             )
 
-                            userViewModel.addVehicle(newVehicle) {
-                                // Alertas automáticas
-                                userViewModel.addAlert(
-                                    "SOAP próximo a vencer",
-                                    "El SOAP de ${brand} vence el ${soapDate}."
-                                )
-                                userViewModel.addAlert(
-                                    "Permiso de Circulación",
-                                    "El permiso de ${brand} vence el ${permisoDate}."
-                                )
-                                userViewModel.addAlert(
-                                    "Revisión Técnica",
-                                    "La revisión técnica de ${brand} vence el ${revisionDate}."
-                                )
-
-                                message = "Vehículo agregado correctamente"
-                                isSuccess = true
-                                brand = ""; model = ""; year = ""
-                                plate = ""; km = ""
-                                soapDate = ""; permisoDate = ""; revisionDate = ""
+                            userViewModel.addVehicle(newVehicle) { ok ->
+                                if (ok) {
+                                    message = "Vehículo agregado correctamente"
+                                    isSuccess = true
+                                    brand = ""; model = ""; year = ""
+                                    plate = ""; km = ""
+                                    soapDate = ""; permisoDate = ""; revisionDate = ""
+                                } else {
+                                    message = "Error al agregar vehículo"
+                                    isSuccess = false
+                                }
                             }
                         } else {
-                            message = "Por favor completa todos los campos."
+                            message = "Completa todos los campos"
                             isSuccess = false
                         }
                     }
@@ -338,6 +335,7 @@ fun ManageVehicleScreen(
             ) {
                 items(vehicles.size) { index ->
                     val v = vehicles[index]
+
                     Card(
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(containerColor = cardColor),
@@ -369,6 +367,7 @@ fun ManageVehicleScreen(
             }
         }
 
+        // DIÁLOGO CONFIRMACIÓN
         if (showDeleteDialog && vehicleToDelete != null) {
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = false },
@@ -378,7 +377,7 @@ fun ManageVehicleScreen(
                     TextButton(onClick = {
                         userViewModel.removeVehicle(vehicleToDelete!!)
                         showDeleteDialog = false
-                        message = "Vehículo eliminado correctamente"
+                        message = "Vehículo eliminado"
                         isSuccess = true
                     }) {
                         Text("Eliminar", color = MyCarRed)

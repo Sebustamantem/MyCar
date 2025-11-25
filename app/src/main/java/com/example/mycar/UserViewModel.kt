@@ -9,10 +9,12 @@ import androidx.room.Room
 import com.example.mycar.data.*
 import com.example.mycar.model.AlertRecord
 import com.example.mycar.model.VehicleData
+import com.example.mycar.model.MaintenanceRecord
+import com.example.mycar.network.dto.*
 import com.example.mycar.repository.AlertRepository
+import com.example.mycar.repository.MaintenanceRepository
 import com.example.mycar.repository.UserRepository
 import com.example.mycar.repository.VehicleRepository
-import com.example.mycar.network.dto.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -33,6 +35,7 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
     private val userDao = db.userDao()
     private val vehicleDao = db.vehicleDao()
     private val alertDao = db.alertDao()
+    private val maintenanceDao = db.maintenanceDao()
 
     // ============================================================
     // REPOSITORIES (Retrofit)
@@ -40,6 +43,7 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
     private val userRepo = UserRepository()
     private val vehicleRepo = VehicleRepository()
     private val alertRepo = AlertRepository()
+    private val maintenanceRepo = MaintenanceRepository()
 
     // ============================================================
     // USER SESSION
@@ -53,17 +57,15 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
     var profilePhoto = mutableStateOf<android.graphics.Bitmap?>(null)
 
     // ============================================================
-    // VEHICLES
+    // STATE LISTS
     // ============================================================
     var vehicles = mutableStateListOf<VehicleData>()
-
-    // ============================================================
-    // ALERTS
-    // ============================================================
     var alerts = mutableStateListOf<AlertRecord>()
+    var maintenanceList = mutableStateListOf<MaintenanceRecord>()
+
 
     // ============================================================
-    // AUTH: REGISTER
+    // REGISTER
     // ============================================================
     fun registerUser(
         name: String,
@@ -75,7 +77,7 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val request = UserRequest(
+                val request = RegisterRequest(
                     name = name,
                     lastName = lastName,
                     email = email,
@@ -85,7 +87,6 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
 
                 val response = userRepo.register(request)
 
-                // Guardar en Room
                 userDao.insert(
                     UserEntity(
                         email = response.email,
@@ -103,8 +104,9 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+
     // ============================================================
-    // AUTH: LOGIN
+    // LOGIN
     // ============================================================
     fun loginUser(email: String, password: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -116,7 +118,6 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
                     return@launch
                 }
 
-                // Guardar sesión
                 userDao.insert(
                     UserEntity(
                         email = response.email,
@@ -147,21 +148,25 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
         userEmail.value = ""
         userPhone.value = ""
         isLoggedIn.value = false
+
         vehicles.clear()
         alerts.clear()
+        maintenanceList.clear()
+
         profilePhoto.value = null
     }
 
+
     // ============================================================
-    // VEHICLES: LOAD FROM API + SAVE IN ROOM
+    // VEHICLES
     // ============================================================
     fun loadVehicles() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val apiList = vehicleRepo.getVehicles(userEmail.value)
 
-                // Sync Room
                 vehicleDao.clear()
+
                 apiList.forEach {
                     vehicleDao.insert(
                         VehicleEntity(
@@ -180,8 +185,14 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
 
                 val mapped = apiList.map {
                     VehicleData(
-                        it.brand, it.model, it.year, it.plate, it.km,
-                        it.soapDate, it.permisoCirculacionDate, it.revisionTecnicaDate
+                        brand = it.brand,
+                        model = it.model,
+                        year = it.year,
+                        plate = it.plate,
+                        km = it.km,
+                        soapDate = it.soapDate,
+                        permisoCirculacionDate = it.permisoCirculacionDate,
+                        revisionTecnicaDate = it.revisionTecnicaDate
                     )
                 }
 
@@ -191,13 +202,22 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
             } catch (e: Exception) {
+
                 val local = vehicleDao.getAllByEmail(userEmail.value)
+
                 val mapped = local.map {
                     VehicleData(
-                        it.brand, it.model, it.year, it.plate, it.km,
-                        it.soapDate, it.permisoCirculacionDate, it.revisionTecnicaDate
+                        brand = it.brand,
+                        model = it.model,
+                        year = it.year,
+                        plate = it.plate,
+                        km = it.km,
+                        soapDate = it.soapDate,
+                        permisoCirculacionDate = it.permisoCirculacionDate,
+                        revisionTecnicaDate = it.revisionTecnicaDate
                     )
                 }
+
                 withContext(Dispatchers.Main) {
                     vehicles.clear()
                     vehicles.addAll(mapped)
@@ -205,6 +225,7 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
 
     fun addVehicle(vehicle: VehicleData, onResult: (Boolean) -> Unit = {}) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -223,7 +244,6 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
 
                 val response = vehicleRepo.addVehicle(request)
 
-                // Guardar local
                 vehicleDao.insert(
                     VehicleEntity(
                         plate = response.plate,
@@ -247,19 +267,19 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+
     fun removeVehicle(vehicle: VehicleData) {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                vehicleRepo.deleteVehicle(vehicle.plate)
-            } catch (_: Exception) {}
+            try { vehicleRepo.deleteVehicle(vehicle.plate) } catch (_: Exception) {}
 
             vehicleDao.deleteByPlate(vehicle.plate)
             loadVehicles()
         }
     }
 
+
     // ============================================================
-    // ALERTAS
+    // ALERTS
     // ============================================================
     fun loadAlerts() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -267,6 +287,7 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
                 val apiList = alertRepo.getAlerts(userEmail.value)
 
                 alertDao.clear()
+
                 apiList.forEach {
                     alertDao.insert(
                         AlertEntity(
@@ -289,7 +310,9 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
             } catch (e: Exception) {
+
                 val local = alertDao.getAll()
+
                 val mapped = local.map {
                     AlertRecord(it.id, it.title, it.message, it.date)
                 }
@@ -301,6 +324,7 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
 
     fun addAlert(title: String, message: String) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -332,11 +356,106 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+
     fun removeAlert(alert: AlertRecord) {
         viewModelScope.launch(Dispatchers.IO) {
             try { alertRepo.deleteAlert(alert.id) } catch (_: Exception) {}
+
             alertDao.deleteById(alert.id)
             loadAlerts()
+        }
+    }
+
+
+    // ============================================================
+    // MAINTENANCE
+    // ============================================================
+    fun loadMaintenance() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val apiList = maintenanceRepo.getMaintenance(userEmail.value)
+
+                maintenanceDao.clear()
+
+                apiList.forEach {
+                    maintenanceDao.insert(
+                        MaintenanceEntity(
+                            id = it.id,
+                            userEmail = userEmail.value,
+                            type = it.type,
+                            vehiclePlate = it.vehiclePlate,
+                            date = it.date,
+                            km = it.km,
+                            notes = it.notes
+                        )
+                    )
+                }
+
+                val mapped = apiList.map {
+                    MaintenanceRecord(
+                        id = it.id,
+                        type = it.type,
+                        vehiclePlate = it.vehiclePlate,
+                        date = it.date,
+                        km = it.km,
+                        notes = it.notes
+                    )
+                }
+
+                withContext(Dispatchers.Main) {
+                    maintenanceList.clear()
+                    maintenanceList.addAll(mapped)
+                }
+
+            } catch (e: Exception) {
+
+                val local = maintenanceDao.getAll()
+
+                val mapped = local.map {
+                    MaintenanceRecord(
+                        id = it.id,
+                        type = it.type,
+                        vehiclePlate = it.vehiclePlate,
+                        date = it.date,
+                        km = it.km,
+                        notes = it.notes
+                    )
+                }
+
+                withContext(Dispatchers.Main) {
+                    maintenanceList.clear()
+                    maintenanceList.addAll(mapped)
+                }
+            }
+        }
+    }
+
+
+    fun addMaintenance(record: MaintenanceRecord) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val request = MaintenanceRequest(
+                type = record.type,
+                vehiclePlate = record.vehiclePlate,
+                date = record.date,
+                km = record.km,
+                notes = record.notes
+            )
+
+            try {
+                maintenanceRepo.addMaintenance(request)
+            } catch (_: Exception) {}
+
+            loadMaintenance()
+        }
+    }
+
+
+    fun removeMaintenance(record: MaintenanceRecord) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try { maintenanceRepo.deleteMaintenance(record.id) } catch (_: Exception) {}
+
+            maintenanceDao.deleteById(record.id)
+            loadMaintenance()
         }
     }
 }

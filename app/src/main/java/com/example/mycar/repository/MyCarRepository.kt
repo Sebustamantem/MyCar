@@ -1,11 +1,12 @@
 package com.example.mycar.repository
 
-import com.example.mycar.network.ApiService
-import com.example.mycar.network.RetrofitClient
+import com.example.mycar.network.MyCarApi
+import com.example.mycar.network.RetrofitInstance
+import com.example.mycar.network.dto.*
 
 class MyCarRepository {
 
-    private val api = RetrofitClient.instance.create(ApiService::class.java)
+    private val api = RetrofitInstance.api
 
     // AUTH
     suspend fun login(email: String, pass: String) =
@@ -13,7 +14,6 @@ class MyCarRepository {
 
     suspend fun register(req: RegisterRequest) =
         api.register(req)
-
 
     // VEHICLES
     suspend fun getVehicles(email: String) =
@@ -24,7 +24,6 @@ class MyCarRepository {
 
     suspend fun deleteVehicle(plate: String) =
         api.deleteVehicle(plate)
-
 
     // MAINTENANCE
     suspend fun getMaintenance(email: String) =

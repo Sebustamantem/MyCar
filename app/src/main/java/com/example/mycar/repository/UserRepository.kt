@@ -1,17 +1,16 @@
 package com.example.mycar.repository
 
-import com.example.mycar.network.RetrofitClient
+import com.example.mycar.network.RetrofitInstance
 import com.example.mycar.network.dto.LoginRequest
-import com.example.mycar.network.dto.UserRequest
-import com.example.mycar.network.dto.UserResponse
+import com.example.mycar.network.dto.RegisterRequest
 
 class UserRepository {
 
-    private val api = RetrofitClient.apiUser
+    private val api = RetrofitInstance.api
 
-    suspend fun register(request: UserRequest): UserResponse =
-        api.register(request)
-
-    suspend fun login(email: String, password: String): UserResponse? =
+    suspend fun login(email: String, password: String) =
         api.login(LoginRequest(email, password))
+
+    suspend fun register(req: RegisterRequest) =
+        api.register(req)
 }
