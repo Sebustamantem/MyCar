@@ -1,10 +1,6 @@
-package com.example.mycar.data
-
-
-
+package com.example.mycar.models
 
 data class AlertRecord(
-    val id: Int,
     val title: String,
     val message: String,
     val date: String

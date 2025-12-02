@@ -1,17 +1,12 @@
-package com.example.mycar.data
+package com.example.mycar.models
 
-import androidx.room.Entity
-import androidx.room.PrimaryKey
-
-@Entity(tableName = "vehicles")
-data class VehicleEntity(
-    @PrimaryKey val plate: String,
+data class VehicleData(
     val brand: String,
     val model: String,
     val year: Int,
+    val plate: String,
     val km: String,
     val soapDate: String,
     val permisoCirculacionDate: String,
     val revisionTecnicaDate: String
 )
-

@@ -1,4 +1,4 @@
-package com.example.mycar
+package com.example.mycar.models
 
 data class MaintenanceRecord(
     val vehiclePlate: String,

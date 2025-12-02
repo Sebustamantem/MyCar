@@ -21,7 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.mycar.UserViewModel
-import com.example.mycar.VehicleData
+import com.example.mycar.models.VehicleData
 import com.example.mycar.components.*
 import com.example.mycar.ui.theme.*
 import java.text.SimpleDateFormat
@@ -39,7 +39,6 @@ fun ManageVehicleScreen(
     val backgroundGradient = Brush.verticalGradient(listOf(MyCarLightBlue, Color.White))
     val cardColor = Color.White
 
-    // Guardan el estado al rotar
     var brand by rememberSaveable { mutableStateOf("") }
     var model by rememberSaveable { mutableStateOf("") }
     var year by rememberSaveable { mutableStateOf("") }
@@ -56,12 +55,10 @@ fun ManageVehicleScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var vehicleToDelete by remember { mutableStateOf<VehicleData?>(null) }
 
-    LaunchedEffect(Unit) { userViewModel.loadVehicles() }
-
-    val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-    val calendar = Calendar.getInstance()
-
     fun openDatePicker(onDateSelected: (String) -> Unit) {
+        val calendar = Calendar.getInstance()
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+
         val dialog = DatePickerDialog(
             context,
             { _, year, month, day ->
@@ -76,20 +73,21 @@ fun ManageVehicleScreen(
         dialog.show()
     }
 
-    // Listas para selección
     val brandList = listOf(
-        "Toyota", "Chevrolet", "Hyundai", "Ford", "Kia", "Nissan", "Volkswagen", "Peugeot"
+        "Toyota","Chevrolet","Hyundai","Ford","Kia","Nissan","Volkswagen","Peugeot"
     )
+
     val modelMap = mapOf(
-        "Toyota" to listOf("Yaris", "Corolla", "Hilux", "Rav4"),
-        "Chevrolet" to listOf("Spark", "Onix", "Cruze", "Tracker", "S10"),
-        "Hyundai" to listOf("Accent", "Elantra", "Tucson", "Santa Fe"),
-        "Ford" to listOf("Fiesta", "Focus", "Ranger", "Ecosport"),
-        "Kia" to listOf("Rio", "Cerato", "Sportage", "Sorento"),
-        "Nissan" to listOf("Versa", "Sentra", "Navara", "Kicks"),
-        "Volkswagen" to listOf("Gol", "Polo", "Tiguan", "Amarok"),
-        "Peugeot" to listOf("208", "3008", "2008", "Partner")
+        "Toyota" to listOf("Yaris","Corolla","Hilux","Rav4"),
+        "Chevrolet" to listOf("Spark","Onix","Cruze","Tracker","S10"),
+        "Hyundai" to listOf("Accent","Elantra","Tucson","Santa Fe"),
+        "Ford" to listOf("Fiesta","Focus","Ranger","Ecosport"),
+        "Kia" to listOf("Rio","Cerato","Sportage","Sorento"),
+        "Nissan" to listOf("Versa","Sentra","Navara","Kicks"),
+        "Volkswagen" to listOf("Gol","Polo","Tiguan","Amarok"),
+        "Peugeot" to listOf("208","3008","2008","Partner")
     )
+
     val yearList = (2000..2025).toList().reversed()
 
     Box(
@@ -103,7 +101,7 @@ fun ManageVehicleScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Encabezado
+
             ScreenHeader(
                 title = "Gestión de Vehículos",
                 onBack = {
@@ -119,8 +117,8 @@ fun ManageVehicleScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = cardColor),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                colors = CardDefaults.cardColors(cardColor),
+                elevation = CardDefaults.cardElevation(6.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
 
@@ -135,9 +133,12 @@ fun ManageVehicleScreen(
                             onValueChange = {},
                             label = { Text("Marca") },
                             readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedBrand) },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expandedBrand)
+                            },
                             modifier = Modifier.menuAnchor().fillMaxWidth()
                         )
+
                         ExposedDropdownMenu(
                             expanded = expandedBrand,
                             onDismissRequest = { expandedBrand = false }
@@ -160,6 +161,7 @@ fun ManageVehicleScreen(
                     // Modelo
                     var expandedModel by remember { mutableStateOf(false) }
                     val models = modelMap[brand] ?: emptyList()
+
                     ExposedDropdownMenuBox(
                         expanded = expandedModel,
                         onExpandedChange = { expandedModel = !expandedModel }
@@ -167,12 +169,15 @@ fun ManageVehicleScreen(
                         OutlinedTextField(
                             value = model,
                             onValueChange = {},
-                            label = { Text("Modelo") },
                             readOnly = true,
                             enabled = brand.isNotEmpty(),
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedModel) },
+                            label = { Text("Modelo") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expandedModel)
+                            },
                             modifier = Modifier.menuAnchor().fillMaxWidth()
                         )
+
                         ExposedDropdownMenu(
                             expanded = expandedModel,
                             onDismissRequest = { expandedModel = false }
@@ -200,11 +205,14 @@ fun ManageVehicleScreen(
                         OutlinedTextField(
                             value = year,
                             onValueChange = {},
-                            label = { Text("Año") },
                             readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedYear) },
+                            label = { Text("Año") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expandedYear)
+                            },
                             modifier = Modifier.menuAnchor().fillMaxWidth()
                         )
+
                         ExposedDropdownMenu(
                             expanded = expandedYear,
                             onDismissRequest = { expandedYear = false }
@@ -229,12 +237,12 @@ fun ManageVehicleScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Fechas
+                    // Fecha SOAP
                     OutlinedTextField(
                         value = soapDate,
                         onValueChange = {},
-                        label = { Text("Fecha SOAP") },
                         readOnly = true,
+                        label = { Text("Fecha SOAP") },
                         trailingIcon = {
                             TextButton(onClick = { openDatePicker { soapDate = it } }) {
                                 Text("Seleccionar")
@@ -245,11 +253,12 @@ fun ManageVehicleScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    // Permiso circulación
                     OutlinedTextField(
                         value = permisoDate,
                         onValueChange = {},
-                        label = { Text("Permiso de Circulación") },
                         readOnly = true,
+                        label = { Text("Permiso de circulación") },
                         trailingIcon = {
                             TextButton(onClick = { openDatePicker { permisoDate = it } }) {
                                 Text("Seleccionar")
@@ -260,11 +269,12 @@ fun ManageVehicleScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    // Revisión técnica
                     OutlinedTextField(
                         value = revisionDate,
                         onValueChange = {},
-                        label = { Text("Revisión Técnica") },
                         readOnly = true,
+                        label = { Text("Revisión Técnica") },
                         trailingIcon = {
                             TextButton(onClick = { openDatePicker { revisionDate = it } }) {
                                 Text("Seleccionar")
@@ -275,12 +285,19 @@ fun ManageVehicleScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Agregar vehículo
+                    // Agregar
                     MyCarButton(text = "Agregar vehículo", icon = Icons.Filled.Add) {
-                        if (brand.isNotBlank() && model.isNotBlank() && year.isNotBlank() &&
-                            plate.isNotBlank() && km.isNotBlank() &&
-                            soapDate.isNotBlank() && permisoDate.isNotBlank() && revisionDate.isNotBlank()
+                        if (
+                            brand.isNotBlank() &&
+                            model.isNotBlank() &&
+                            year.isNotBlank() &&
+                            plate.isNotBlank() &&
+                            km.isNotBlank() &&
+                            soapDate.isNotBlank() &&
+                            permisoDate.isNotBlank() &&
+                            revisionDate.isNotBlank()
                         ) {
+
                             val newVehicle = VehicleData(
                                 brand = brand,
                                 model = model,
@@ -292,29 +309,22 @@ fun ManageVehicleScreen(
                                 revisionTecnicaDate = revisionDate
                             )
 
-                            userViewModel.addVehicle(newVehicle) {
-                                // Alertas automáticas
-                                userViewModel.addAlert(
-                                    "SOAP próximo a vencer",
-                                    "El SOAP de ${brand} vence el ${soapDate}."
-                                )
-                                userViewModel.addAlert(
-                                    "Permiso de Circulación",
-                                    "El permiso de ${brand} vence el ${permisoDate}."
-                                )
-                                userViewModel.addAlert(
-                                    "Revisión Técnica",
-                                    "La revisión técnica de ${brand} vence el ${revisionDate}."
-                                )
+                            userViewModel.addVehicle(newVehicle)
 
-                                message = "Vehículo agregado correctamente"
-                                isSuccess = true
-                                brand = ""; model = ""; year = ""
-                                plate = ""; km = ""
-                                soapDate = ""; permisoDate = ""; revisionDate = ""
-                            }
+                            message = "Vehículo agregado correctamente"
+                            isSuccess = true
+
+                            brand = ""
+                            model = ""
+                            year = ""
+                            plate = ""
+                            km = ""
+                            soapDate = ""
+                            permisoDate = ""
+                            revisionDate = ""
+
                         } else {
-                            message = "Por favor completa todos los campos."
+                            message = "Completa todos los campos"
                             isSuccess = false
                         }
                     }
@@ -334,14 +344,16 @@ fun ManageVehicleScreen(
             Text("Vehículos registrados:", color = Color.Black)
 
             LazyColumn(
-                modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 400.dp)
             ) {
                 items(vehicles.size) { index ->
                     val v = vehicles[index]
                     Card(
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = cardColor),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                        colors = CardDefaults.cardColors(cardColor),
+                        elevation = CardDefaults.cardElevation(4.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 6.dp)
@@ -359,7 +371,7 @@ fun ManageVehicleScreen(
                                 vehicleToDelete = v
                                 showDeleteDialog = true
                             }) {
-                                Icon(Icons.Filled.Delete, contentDescription = "Eliminar", tint = MyCarRed)
+                                Icon(Icons.Filled.Delete, contentDescription = null, tint = MyCarRed)
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text("Eliminar", color = MyCarRed)
                             }
@@ -378,7 +390,7 @@ fun ManageVehicleScreen(
                     TextButton(onClick = {
                         userViewModel.removeVehicle(vehicleToDelete!!)
                         showDeleteDialog = false
-                        message = "Vehículo eliminado correctamente"
+                        message = "Vehículo eliminado"
                         isSuccess = true
                     }) {
                         Text("Eliminar", color = MyCarRed)
