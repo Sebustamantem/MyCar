@@ -18,13 +18,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.mycar.UserViewModel
-import com.example.mycar.models.VehicleData
 import com.example.mycar.models.MaintenanceRecord
 import com.example.mycar.components.*
 import java.text.SimpleDateFormat
 import java.util.*
 import com.example.mycar.ui.theme.*
 import kotlinx.coroutines.launch
+import com.example.mycar.network.dto.VehicleResponse
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,7 +34,6 @@ fun MaintenanceScreen(
 ) {
     val backgroundGradient = Brush.verticalGradient(listOf(MyCarLightBlue, Color.White))
     val cardColor = Color.White
-    val textColor = Color.Black
 
     val maintenanceCategories = mapOf(
         "Motor" to listOf("Cambio de aceite", "Cambio de bujías", "Cambio de filtro de aire"),
@@ -46,9 +45,12 @@ fun MaintenanceScreen(
     val vehicles = userViewModel.vehicles
     val maintenanceList = userViewModel.maintenanceList
 
-    var selectedVehicle by remember { mutableStateOf<VehicleData?>(null) }
+    // *** SIN VehicleData ***
+    var selectedVehicle by remember { mutableStateOf<VehicleResponse?>(null) }
+
     var selectedCategory by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf("") }
+
     var km by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
 
@@ -57,9 +59,7 @@ fun MaintenanceScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { padding ->
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -93,20 +93,24 @@ fun MaintenanceScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
 
-                    // VEHÍCULO
+                    // ----------------------------
+                    //     VEHÍCULO SELECTOR
+                    // ----------------------------
+
                     var expandedVehicle by remember { mutableStateOf(false) }
+
                     ExposedDropdownMenuBox(
                         expanded = expandedVehicle,
                         onExpandedChange = { expandedVehicle = !expandedVehicle }
                     ) {
                         OutlinedTextField(
-                            value = selectedVehicle?.let { "${it.brand} ${it.model} (${it.plate})" } ?: "",
+                            value = selectedVehicle?.let {
+                                "${it.brand} ${it.model} (${it.plate})"
+                            } ?: "",
                             onValueChange = {},
                             label = { Text("Seleccionar vehículo") },
                             readOnly = true,
-                            trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expandedVehicle)
-                            },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expandedVehicle) },
                             modifier = Modifier.menuAnchor().fillMaxWidth()
                         )
 
@@ -119,7 +123,7 @@ fun MaintenanceScreen(
                                     text = { Text("${v.brand} ${v.model} (${v.plate})") },
                                     onClick = {
                                         selectedVehicle = v
-                                        km = v.km
+                                        km = v.km.toString()     // ← km string
                                         expandedVehicle = false
                                     }
                                 )
@@ -147,8 +151,12 @@ fun MaintenanceScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // CATEGORÍA
+                    // ----------------------------
+                    //     CATEGORÍA
+                    // ----------------------------
+
                     var expandedCategory by remember { mutableStateOf(false) }
+
                     ExposedDropdownMenuBox(
                         expanded = expandedCategory,
                         onExpandedChange = { expandedCategory = !expandedCategory }
@@ -158,11 +166,10 @@ fun MaintenanceScreen(
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Categoría") },
-                            trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expandedCategory)
-                            },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expandedCategory) },
                             modifier = Modifier.menuAnchor().fillMaxWidth()
                         )
+
                         ExposedDropdownMenu(
                             expanded = expandedCategory,
                             onDismissRequest = { expandedCategory = false }
@@ -182,8 +189,12 @@ fun MaintenanceScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // TIPO
+                    // ----------------------------
+                    //     TIPO
+                    // ----------------------------
+
                     var expandedType by remember { mutableStateOf(false) }
+
                     ExposedDropdownMenuBox(
                         expanded = expandedType,
                         onExpandedChange = { expandedType = !expandedType }
@@ -193,16 +204,16 @@ fun MaintenanceScreen(
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Tipo") },
-                            trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expandedType)
-                            },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expandedType) },
                             modifier = Modifier.menuAnchor().fillMaxWidth()
                         )
+
+                        val types = maintenanceCategories[selectedCategory] ?: emptyList()
+
                         ExposedDropdownMenu(
                             expanded = expandedType,
                             onDismissRequest = { expandedType = false }
                         ) {
-                            val types = maintenanceCategories[selectedCategory] ?: emptyList()
                             types.forEach { t ->
                                 DropdownMenuItem(
                                     text = { Text(t) },
@@ -217,7 +228,10 @@ fun MaintenanceScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // KM
+                    // ----------------------------
+                    //     KM
+                    // ----------------------------
+
                     MyCarTextField(
                         value = km,
                         onValueChange = { km = it },
@@ -227,7 +241,10 @@ fun MaintenanceScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // NOTAS
+                    // ----------------------------
+                    //     NOTAS
+                    // ----------------------------
+
                     MyCarTextField(
                         value = notes,
                         onValueChange = { notes = it },
@@ -236,13 +253,17 @@ fun MaintenanceScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // AGREGAR
+                    // ----------------------------
+                    //    AGREGAR MANTENIMIENTO
+                    // ----------------------------
+
                     MyCarButton(text = "Agregar mantenimiento", icon = Icons.Filled.Add) {
 
                         if (selectedVehicle != null &&
                             selectedCategory.isNotBlank() &&
                             selectedType.isNotBlank()
                         ) {
+
                             val record = MaintenanceRecord(
                                 vehiclePlate = selectedVehicle!!.plate,
                                 type = "$selectedCategory - $selectedType",
@@ -253,12 +274,12 @@ fun MaintenanceScreen(
 
                             userViewModel.addMaintenance(record)
 
-                            // ACTUALIZAR KM
+                            // ACTUALIZAR KM dentro del listado
                             val index = userViewModel.vehicles.indexOfFirst {
                                 it.plate == selectedVehicle!!.plate
                             }
                             if (index != -1) {
-                                val updated = selectedVehicle!!.copy(km = km)
+                                val updated = selectedVehicle!!.copy(km = km.toIntOrNull() ?: 0)
                                 userViewModel.vehicles[index] = updated
                                 selectedVehicle = updated
                             }
@@ -283,52 +304,54 @@ fun MaintenanceScreen(
                         Text("Ver historial", color = Color.White)
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(20.dp))
 
-            // LISTA DE MANTENIMIENTOS
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            ) {
-                items(maintenanceList.size) { index ->
-                    val record = maintenanceList[index]
+                Spacer(modifier = Modifier.height(20.dp))
 
-                    Card(
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(cardColor),
-                        elevation = CardDefaults.cardElevation(4.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp)
+                // ----------------------------
+                //     LISTA DE REGISTROS
+                // ----------------------------
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
+                    items(maintenanceList.size) { index ->
+                        val record = maintenanceList[index]
+
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(cardColor),
+                            elevation = CardDefaults.cardElevation(4.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
                         ) {
-                            Text(record.type, fontWeight = FontWeight.Bold)
-                            Text("Vehículo: ${record.vehiclePlate}", color = Color.Gray)
-                            Text("Fecha: ${record.date} | ${record.km} km", color = Color.Gray)
-                            if (record.notes.isNotBlank())
-                                Text("Notas: ${record.notes}", color = Color.DarkGray)
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(record.type, fontWeight = FontWeight.Bold)
+                                Text("Vehículo: ${record.vehiclePlate}", color = Color.Gray)
+                                Text("Fecha: ${record.date} | ${record.km} km", color = Color.Gray)
+                                if (record.notes.isNotBlank())
+                                    Text("Notas: ${record.notes}", color = Color.DarkGray)
 
-                            Spacer(modifier = Modifier.height(6.dp))
+                                Spacer(modifier = Modifier.height(6.dp))
 
-                            TextButton(
-                                onClick = {
-                                    userViewModel.removeMaintenance(record)
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar(
-                                            "Mantenimiento eliminado",
-                                            duration = SnackbarDuration.Short
-                                        )
+                                TextButton(
+                                    onClick = {
+                                        userViewModel.removeMaintenance(record)
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar(
+                                                "Mantenimiento eliminado",
+                                                duration = SnackbarDuration.Short
+                                            )
+                                        }
                                     }
+                                ) {
+                                    Icon(Icons.Filled.Delete, null, tint = MyCarRed)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Eliminar", color = MyCarRed)
                                 }
-                            ) {
-                                Icon(Icons.Filled.Delete, null, tint = MyCarRed)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Eliminar", color = MyCarRed)
                             }
                         }
                     }

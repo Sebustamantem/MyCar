@@ -28,9 +28,6 @@ fun AlertasScreen(
     val alerts = userViewModel.alerts
     val gradient = Brush.verticalGradient(listOf(MyCarLightBlue, Color.White))
 
-    // Cargar alertas al entrar
-    LaunchedEffect(Unit) { userViewModel.loadAlerts() }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -122,7 +119,7 @@ fun AlertasScreen(
 
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        " ${alert.date}",
+                                        alert.date,
                                         color = Color.Gray,
                                         style = MaterialTheme.typography.labelSmall
                                     )

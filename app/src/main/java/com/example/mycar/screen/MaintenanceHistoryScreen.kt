@@ -17,8 +17,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.mycar.UserViewModel
-import com.example.mycar.components.*
-import com.example.mycar.ui.theme.*
+import com.example.mycar.ui.theme.MyCarBlue
+import com.example.mycar.ui.theme.MyCarLightBlue
+import com.example.mycar.ui.theme.MyCarRed
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MaintenanceHistoryScreen(
@@ -28,11 +30,9 @@ fun MaintenanceHistoryScreen(
     val maintenanceList = userViewModel.maintenanceList
     val vehicles = userViewModel.vehicles
 
-    // Fondo claro fijo
     val backgroundGradient = Brush.verticalGradient(listOf(MyCarLightBlue, Color.White))
-    val cardColor = Color.White
-    val textColor = Color.Black
     val secondaryText = Color.Gray
+    val cardColor = Color.White
 
     var selectedVehicle by remember { mutableStateOf("") }
     var expandedVehicle by remember { mutableStateOf(false) }
@@ -54,24 +54,17 @@ fun MaintenanceHistoryScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxSize()
         ) {
-            // Encabezado
-            ScreenHeader(
-                title = "Historial de Mantenimientos",
-                onBack = {
-                    val popped = navController.popBackStack("home", inclusive = false)
-                    if (!popped) {
-                        navController.navigate("home") {
-                            popUpTo("home") { inclusive = false }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                }
+            // Header
+            Text(
+                text = "Historial de Mantenimientos",
+                fontWeight = FontWeight.Bold,
+                color = MyCarBlue,
+                fontSize = 22.sp
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Selección de vehículo
+            // Filtro por vehículo
             ExposedDropdownMenuBox(
                 expanded = expandedVehicle,
                 onExpandedChange = { expandedVehicle = !expandedVehicle }
@@ -79,8 +72,8 @@ fun MaintenanceHistoryScreen(
                 OutlinedTextField(
                     value = if (selectedVehicle.isEmpty()) "Todos los vehículos" else selectedVehicle,
                     onValueChange = {},
-                    label = { Text("Filtrar por vehículo") },
                     readOnly = true,
+                    label = { Text("Filtrar por vehículo") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedVehicle) },
                     modifier = Modifier
                         .menuAnchor()
@@ -98,6 +91,7 @@ fun MaintenanceHistoryScreen(
                             expandedVehicle = false
                         }
                     )
+
                     vehicles.forEach { vehicle ->
                         DropdownMenuItem(
                             text = { Text("${vehicle.brand} ${vehicle.model} (${vehicle.plate})") },
@@ -128,6 +122,7 @@ fun MaintenanceHistoryScreen(
                 ) {
                     items(filteredRecords.size) { index ->
                         val record = filteredRecords[index]
+
                         Card(
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(containerColor = cardColor),
@@ -137,31 +132,43 @@ fun MaintenanceHistoryScreen(
                                 .padding(vertical = 6.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
+
                                 Text(
                                     text = record.type,
                                     fontWeight = FontWeight.Bold,
-                                    color = MyCarBlue
+                                    color = MyCarBlue,
+                                    fontSize = 18.sp
                                 )
+
                                 Text(
                                     text = "Vehículo: ${record.vehiclePlate}",
                                     color = secondaryText,
                                     fontSize = 13.sp
                                 )
+
                                 Spacer(modifier = Modifier.height(4.dp))
+
                                 Text(
                                     text = "Fecha: ${record.date} | ${record.km} km",
                                     color = secondaryText,
                                     fontSize = 13.sp
                                 )
+
                                 if (record.notes.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = "Notas: ${record.notes}",
-                                        color = textColor,
+                                        color = Color.Black,
                                         fontSize = 13.sp
                                     )
                                 }
+
                                 Spacer(modifier = Modifier.height(8.dp))
-                                TextButton(onClick = { userViewModel.removeMaintenance(record) }) {
+
+                                // 🔥 Eliminación local segura
+                                TextButton(
+                                    onClick = { userViewModel.maintenanceList.remove(record) }
+                                ) {
                                     Icon(Icons.Filled.Delete, contentDescription = null, tint = MyCarRed)
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text("Eliminar", color = MyCarRed)

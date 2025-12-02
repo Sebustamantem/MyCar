@@ -6,19 +6,23 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.mycar.models.VehicleData
 import com.example.mycar.models.MaintenanceRecord
 import com.example.mycar.models.AlertRecord
+import com.example.mycar.network.dto.VehicleRequest
+import com.example.mycar.network.dto.VehicleResponse
 import com.example.mycar.repository.AuthRepository
+import com.example.mycar.repository.VehicleRepository
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
 class UserViewModel(application: Application) : AndroidViewModel(application) {
 
+    // ========= REPOSITORIOS =========
     private val authRepository = AuthRepository()
+    private val vehicleRepository = VehicleRepository()
 
-    // ======== Datos Usuario ========
+    // ========= DATOS USUARIO =========
     var userId = mutableStateOf<Long?>(null)
     var userName = mutableStateOf("")
     var userLastName = mutableStateOf("")
@@ -29,12 +33,20 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
 
     var profilePhoto = mutableStateOf<Bitmap?>(null)
 
-    // ======== Datos locales ========
-    var vehicles = mutableStateListOf<VehicleData>()
+    // ========= VEHÍCULOS (desde API) =========
+    var vehicles = mutableStateListOf<VehicleResponse>()
+
+    // ========= MANTENIMIENTO LOCAL =========
     var maintenanceList = mutableStateListOf<MaintenanceRecord>()
+
+    // ========= ALERTAS LOCALES =========
     var alerts = mutableStateListOf<AlertRecord>()
 
-    // ======== LOGIN ========
+
+    // =====================================================================
+    //                                AUTH
+    // =====================================================================
+
     fun loginUser(email: String, password: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
             val result = authRepository.login(email, password)
@@ -51,13 +63,10 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
                 onResult(true)
             }
 
-            result.onFailure {
-                onResult(false)
-            }
+            result.onFailure { onResult(false) }
         }
     }
 
-    // ======== REGISTER ========
     fun registerUser(
         name: String,
         lastName: String,
@@ -77,17 +86,13 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
                 userPhone.value = user.phone
                 token.value = user.token
                 isLoggedIn.value = true
-
                 onResult(true)
             }
 
-            result.onFailure {
-                onResult(false)
-            }
+            result.onFailure { onResult(false) }
         }
     }
 
-    // ======== LOGOUT ========
     fun logout() {
         userId.value = null
         userName.value = ""
@@ -103,21 +108,89 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
         profilePhoto.value = null
     }
 
-    // ======== Vehículos ========
-    fun addVehicle(vehicle: VehicleData, onResult: (Boolean) -> Unit = {}) {
-        vehicles.add(vehicle)
-        checkVehicleAlerts(vehicle)
-        onResult(true)
+
+    // =====================================================================
+    //                             VEHICLES API
+    // =====================================================================
+
+    fun loadVehicles() {
+        viewModelScope.launch {
+            try {
+                val user = userId.value ?: return@launch
+                val list = vehicleRepository.getByUser(user)
+                vehicles.clear()
+                vehicles.addAll(list)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
-    fun removeVehicle(vehicle: VehicleData) {
-        vehicles.remove(vehicle)
-        alerts.removeAll { it.title.contains(vehicle.plate, ignoreCase = true) }
+    fun createVehicle(
+        brand: String,
+        model: String,
+        year: Int,
+        plate: String,
+        km: Int,
+        soap: String,
+        permiso: String,
+        revision: String,
+        onResult: (Boolean) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val user = userId.value ?: return@launch
+
+                val request = VehicleRequest(
+                    brand = brand,
+                    model = model,
+                    year = year,
+                    plate = plate,
+                    km = km,
+                    soapDate = soap,
+                    permisoCirculacionDate = permiso,
+                    revisionTecnicaDate = revision,
+                    userId = user
+                )
+
+                val created = vehicleRepository.create(request)
+                vehicles.add(created)
+
+                onResult(true)
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onResult(false)
+            }
+        }
     }
 
-    fun loadVehicles() {}
+    fun deleteVehicle(id: Long, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                vehicleRepository.delete(id)
+                vehicles.removeAll { it.id == id }
+                onResult(true)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onResult(false)
+            }
+        }
+    }
 
-    // ======== Alertas ========
+
+    // =====================================================================
+    //                             ALERTAS LOCALES
+    // =====================================================================
+
+    fun loadAlerts() {
+        // puedes cargar desde BD si más adelante quieres
+    }
+
+    fun removeAlert(alert: AlertRecord) {
+        alerts.remove(alert)
+    }
+
     fun addAlert(title: String, message: String) {
         alerts.add(
             AlertRecord(
@@ -128,24 +201,11 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    fun removeAlert(alert: AlertRecord) {
-        alerts.remove(alert)
-    }
 
-    fun loadAlerts() {}
+    // =====================================================================
+    //                      MANTENIMIENTO LOCAL (NO API)
+    // =====================================================================
 
-    private fun checkVehicleAlerts(vehicle: VehicleData) {
-        if (daysUntil(vehicle.soapDate) <= 15)
-            addAlert("SOAP por vencer", "El SOAP de ${vehicle.plate} vence el ${vehicle.soapDate}")
-
-        if (daysUntil(vehicle.permisoCirculacionDate) <= 15)
-            addAlert("Permiso por vencer", "El permiso vence el ${vehicle.permisoCirculacionDate}")
-
-        if (daysUntil(vehicle.revisionTecnicaDate) <= 15)
-            addAlert("Revisión técnica por vencer", "La revisión vence el ${vehicle.revisionTecnicaDate}")
-    }
-
-    // ======== Mantenimiento ========
     fun addMaintenance(record: MaintenanceRecord) {
         maintenanceList.add(record)
     }
@@ -154,7 +214,11 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
         maintenanceList.remove(record)
     }
 
-    // ======== Utilidades ========
+
+    // =====================================================================
+    //                                UTILIDADES
+    // =====================================================================
+
     private fun getTodayDate(): String {
         return SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
     }
