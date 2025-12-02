@@ -1,0 +1,10 @@
+INSTRUCCIONES
+
+INICIAR CONFIG-SERVER: https://config-server-bph7.onrender.com/
+
+LUEGO API-GATEWAY: https://api-gateway-tnc0.onrender.com/
+
+POSTERIOR LAS APIS :https://auth-service-o4aa.onrender.com/
+			https://vehicule-service.onrender.com/
+
+y La base de datos : https://console.neon.tech/app/projects/spring-union-19709658/branches/br-withered-water-ahlcm0v2/tables
