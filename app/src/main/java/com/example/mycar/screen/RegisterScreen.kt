@@ -26,7 +26,7 @@ import com.example.mycar.ui.theme.MyCarRed
 // --------------------------------------------------------------
 // Validación simple
 // --------------------------------------------------------------
-private fun validarCampos(
+fun validarCampos(
     nombre: String,
     apellido: String,
     correo: String,
