@@ -1,18 +1,18 @@
 package com.example.mycar.navigation
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.*
 import com.example.mycar.UserViewModel
 import com.example.mycar.screen.*
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.ui.draw.scale
 
 @Composable
 fun MainNavHost(
@@ -25,15 +25,15 @@ fun MainNavHost(
     val bottomItems = listOf(
         BottomNavItem("home", "Inicio", Icons.Default.Home),
         BottomNavItem("vehicles", "Vehículos", Icons.Default.DirectionsCar),
-        BottomNavItem("maintenance", "Mantenimientos", Icons.Default.Build),
+        BottomNavItem("maintenance", "Mant.", Icons.Default.Build),
+        BottomNavItem("expenses", "Gastos", Icons.Default.AttachMoney),
         BottomNavItem("profile", "Perfil", Icons.Default.Person),
-        BottomNavItem("alerts", "Alertas", Icons.Default.Notifications)
-
     )
 
     Scaffold(
         bottomBar = {
-            if (currentRoute in listOf("home", "vehicles", "maintenance", "profile")) {
+            // ✅ aquí controlas en qué pantallas se muestra el bottom bar
+            if (currentRoute in listOf("home", "vehicles", "maintenance", "expenses", "profile")) {
                 NavigationBar(
                     containerColor = Color.White,
                     tonalElevation = 6.dp
@@ -60,7 +60,7 @@ fun MainNavHost(
                             },
                             icon = {
                                 Icon(
-                                    item.icon,
+                                    imageVector = item.icon,
                                     contentDescription = item.label,
                                     tint = if (selected) Color(0xFF1565C0) else Color.Gray,
                                     modifier = Modifier.scale(scale)
@@ -145,6 +145,22 @@ fun MainNavHost(
                 )
             }
 
+            // GASTOS
+            composable("expenses") {
+                ExpenseScreen(
+                    userViewModel = userViewModel,
+                    navController = navController
+                )
+            }
+
+            // HISTORIAL DE GASTOS
+            composable("expenseHistory") {
+                ExpenseHistoryScreen(
+                    userViewModel = userViewModel,
+                    navController = navController
+                )
+            }
+
             // PERFIL
             composable("profile") {
                 ProfileScreen(
@@ -152,15 +168,6 @@ fun MainNavHost(
                     navController = navController
                 )
             }
-
-            // ALERTAS
-            composable("alerts") {
-                AlertasScreen(
-                    userViewModel = userViewModel,
-                    navController = navController
-                )
-            }
-
         }
     }
 }

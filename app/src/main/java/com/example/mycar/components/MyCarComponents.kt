@@ -26,6 +26,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.ui.draw.scale
+import androidx.compose.runtime.saveable.rememberSaveable
 
 
 // ---------------------------------------------------------------------------
@@ -176,25 +177,50 @@ fun MyCarTextField(
     singleLine: Boolean = true,
     isPassword: Boolean = false
 ) {
-    var showPassword by remember { mutableStateOf(false) }
+    var showPassword by rememberSaveable { mutableStateOf(false) }
 
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(text = label, color = MyCarBlue) },
         singleLine = singleLine,
-        visualTransformation = if (isPassword && !showPassword)
-            PasswordVisualTransformation() else VisualTransformation.None,
+
+        // OCULTA MIENTRAS NO SE TOQUE EL OJO
+        visualTransformation =
+            if (isPassword && !showPassword)
+                PasswordVisualTransformation()
+            else
+                VisualTransformation.None,
+
+        // OJITO
         trailingIcon = {
             if (isPassword) {
-                val icon = if (showPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
+                val icon =
+                    if (showPassword) Icons.Filled.VisibilityOff
+                    else Icons.Filled.Visibility
+
                 IconButton(onClick = { showPassword = !showPassword }) {
-                    Icon(icon, contentDescription = "Mostrar u ocultar contraseña", tint = MyCarBlue)
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = "Mostrar u ocultar contraseña",
+                        tint = MyCarBlue
+                    )
                 }
             }
         },
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
-        textStyle = TextStyle(color = MyCarBlack, fontSize = 16.sp),
+
+        // ES PASSWORD
+        keyboardOptions = KeyboardOptions(
+            keyboardType = if (isPassword) KeyboardType.Password else keyboardType,
+            imeAction = imeAction,
+            autoCorrect = !isPassword
+        ),
+
+        textStyle = TextStyle(
+            color = MyCarBlack,
+            fontSize = 16.sp
+        ),
+
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MyCarBlue,
             unfocusedBorderColor = MyCarBlue.copy(alpha = 0.5f),
@@ -204,9 +230,11 @@ fun MyCarTextField(
             focusedContainerColor = Color.White,
             unfocusedContainerColor = Color.White
         ),
+
         modifier = Modifier.fillMaxWidth()
     )
 }
+
 
 // ---------------------------------------------------------------------------
 // SNACKBAR PERSONALIZADO

@@ -20,8 +20,6 @@ import com.example.mycar.components.*
 import com.example.mycar.ui.theme.MyCarBlue
 import com.example.mycar.ui.theme.MyCarGreen
 import com.example.mycar.ui.theme.MyCarRed
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,25 +28,50 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onGoRegister: () -> Unit
 ) {
-    // Fondo degradado
     val backgroundGradient = Brush.verticalGradient(listOf(MyCarBlue.copy(alpha = 0.12f), Color.White))
 
-    // Estados UI
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
     var message by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
-    val coroutineScope = rememberCoroutineScope()
+    // Validación simple
+    val emailTrimmed = email.trim()
+    val emailRegex = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")
 
-    // Limpiar estado al entrar (evita mensajes/residuos)
-    LaunchedEffect(Unit) {
-        email = ""
-        password = ""
+    val emailOk = emailTrimmed.isNotBlank() && emailRegex.matches(emailTrimmed)
+    val passOk = password.isNotBlank() && password.length >= 6
+    val canLogin = emailOk && passOk && !isLoading
+
+    fun doLogin() {
+        if (!emailOk) {
+            message = "Ingresa un correo válido."
+            isError = true
+            return
+        }
+        if (!passOk) {
+            message = "La contraseña debe tener al menos 6 caracteres."
+            isError = true
+            return
+        }
+
+        isLoading = true
         message = ""
         isError = false
-        isLoading = false
+
+        userViewModel.loginUser(emailTrimmed, password) { success ->
+            isLoading = false
+            if (success) {
+                message = "Inicio de sesión exitoso"
+                isError = false
+                onLoginSuccess()
+            } else {
+                message = "Correo o contraseña incorrectos."
+                isError = true
+            }
+        }
     }
 
     Box(
@@ -76,7 +99,6 @@ fun LoginScreen(
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Título
                 Text(
                     text = "Iniciar sesión",
                     fontSize = 24.sp,
@@ -86,10 +108,12 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Campo email
                 MyCarTextField(
                     value = email,
-                    onValueChange = { email = it },
+                    onValueChange = {
+                        email = it
+                        if (message.isNotEmpty()) message = "" // limpia mensajes al escribir
+                    },
                     label = "Correo electrónico",
                     keyboardType = KeyboardType.Email,
                     imeAction = ImeAction.Next
@@ -97,10 +121,12 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Campo contraseña
                 MyCarTextField(
                     value = password,
-                    onValueChange = { password = it },
+                    onValueChange = {
+                        password = it
+                        if (message.isNotEmpty()) message = ""
+                    },
                     label = "Contraseña",
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done,
@@ -109,47 +135,21 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Botón ingresar
+                // Botón igual visualmente, pero bloquea doble click y datos inválidos
                 MyCarButton(text = "Ingresar") {
-                    // Validación rápida
-                    if (email.isBlank() || password.isBlank()) {
-                        message = "Por favor completa todos los campos."
+                    if (canLogin) doLogin()
+                    else {
+                        // Mensaje suave si aprieta sin completar
+                        message = "Completa correo y contraseña."
                         isError = true
-                        return@MyCarButton
-                    }
-
-                    // Mostrar loader y llamar ViewModel
-                    isLoading = true
-                    message = ""
-                    isError = false
-
-                    coroutineScope.launch {
-                        // Pequeña pausa para UX consistente
-                        delay(300)
-
-                        // Llamada al ViewModel (usa callback boolean)
-                        userViewModel.loginUser(email, password) { success ->
-                            // Ejecuta en hilo de UI porque callback se llama en ViewModelScope
-                            isLoading = false
-                            if (success) {
-                                message = "Inicio de sesión exitoso"
-                                isError = false
-                                onLoginSuccess()
-                            } else {
-                                message = "Correo o contraseña incorrectos."
-                                isError = true
-                            }
-                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Botón registro
                 MyCarOutlinedButton(
                     text = "¿No tienes cuenta? Regístrate aquí",
                     onClick = {
-                        // limpiar estados antes de navegar
                         email = ""
                         password = ""
                         message = ""
@@ -160,7 +160,6 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Snackbar del mensaje (usamos componente custom)
                 if (message.isNotEmpty()) {
                     MyCarSnackbar(
                         message = message,

@@ -12,6 +12,12 @@ interface VehicleService {
     @POST("vehicles")
     suspend fun createVehicle(@Body request: VehicleRequest): VehicleResponse
 
+    @PUT("vehicles/{id}")
+    suspend fun updateVehicle(
+        @Path("id") id: Long,
+        @Body request: VehicleRequest
+    ): VehicleResponse
+
     @DELETE("vehicles/{id}")
     suspend fun deleteVehicle(@Path("id") id: Long)
 }

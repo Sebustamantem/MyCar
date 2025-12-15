@@ -173,7 +173,7 @@ fun RegisterScreen(
                     ) { success ->
                         isLoading = false
                         if (success) {
-                            mensaje = "Cuenta creada exitosamente 🎉"
+                            mensaje = "Cuenta creada exitosamente"
                             error = false
                             // Navega a login
                             onRegistered()

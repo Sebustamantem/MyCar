@@ -6,11 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Event
-import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,7 +32,7 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MaintenanceScreen(
+fun ExpenseScreen(
     userViewModel: UserViewModel,
     navController: NavController
 ) {
@@ -44,98 +40,41 @@ fun MaintenanceScreen(
     val backgroundGradient = Brush.verticalGradient(listOf(MyCarLightBlue, Color.White))
     val cardColor = Color.White
 
-    // ✅ CATEGORÍAS + OPCIONES
-    val maintenanceCategories = mapOf(
-        "Motor" to listOf(
-            "Cambio de aceite",
-            "Cambio de bujías",
-            "Cambio de filtro de aire",
-            "Cambio de filtro de aceite",
-            "Limpieza de inyectores",
-            "Cambio correa distribución"
-        ),
-        "Frenos" to listOf(
-            "Cambio de pastillas",
-            "Cambio de discos",
-            "Cambio de líquido de frenos",
-            "Rectificación de discos"
-        ),
-        "Suspensión" to listOf(
-            "Cambio de amortiguadores",
-            "Bujes y bandejas",
-            "Alineación",
-            "Balanceo",
-            "Rotación de neumáticos"
-        ),
-        "Transmisión" to listOf(
-            "Cambio de aceite de caja",
-            "Revisión de embrague",
-            "Cambio de embrague"
-        ),
-        "Neumáticos" to listOf(
-            "Cambio de neumáticos",
-            "Reparación/pinchazo",
-            "Presión y calibración",
-            "Rotación"
-        ),
-        "Eléctrico" to listOf(
-            "Batería",
-            "Alternador",
-            "Motor de partida",
-            "Luces (ampolletas/LED)"
-        ),
-        "Climatización" to listOf(
-            "Carga de A/C",
-            "Filtro cabina",
-            "Revisión compresor"
-        ),
-        "Carrocería" to listOf(
-            "Pintura",
-            "Pulido",
-            "Cambio de parabrisas",
-            "Reparación de abolladura"
-        ),
-        "General" to listOf(
-            "Diagnóstico",
-            "Inspección general",
-            "Scanner"
-        )
+    val categories = mapOf(
+        "Combustible" to listOf("Bencina 93", "Bencina 95", "Bencina 97", "Diesel", "Carga eléctrica"),
+        "Peajes" to listOf("TAG", "Peaje manual"),
+        "Estacionamiento" to listOf("Parking", "Parquímetro"),
+        "Lavado" to listOf("Lavado simple", "Lavado full", "Aspirado"),
+        "Seguro" to listOf("SOAP", "Seguro anual", "Seguro mensual"),
+        "Permisos" to listOf("Permiso circulación", "Revisión técnica", "Multa/Parte"),
+        "Otros" to listOf("Accesorios", "Repuestos", "Servicio")
     )
 
     val vehicles = userViewModel.vehicles
-    val maintenanceList = userViewModel.maintenanceApiList
+    val expenseList = userViewModel.expenseApiList
 
     var selectedVehicle by remember { mutableStateOf<VehicleResponse?>(null) }
 
     var selectedCategory by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf("") }
 
+    var amount by remember { mutableStateOf("") }
     var km by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
 
-    // ✅ COSTO
-    var cost by remember { mutableStateOf("") }
-
-    // ✅ FECHA
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
     var selectedDate by remember { mutableStateOf(dateFormat.format(Date())) }
 
-    // ✅ Modo edición
-    var editingMaintenanceId by remember { mutableStateOf<Long?>(null) }
+    var editingExpenseId by remember { mutableStateOf<Long?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        userViewModel.loadVehicles()
-    }
+    LaunchedEffect(Unit) { userViewModel.loadVehicles() }
 
     fun openDatePicker() {
         val cal = Calendar.getInstance()
-        try {
-            val parsed = dateFormat.parse(selectedDate)
-            if (parsed != null) cal.time = parsed
-        } catch (_: Exception) {}
+        try { dateFormat.parse(selectedDate)?.let { cal.time = it } } catch (_: Exception) {}
 
         DatePickerDialog(
             context,
@@ -153,31 +92,25 @@ fun MaintenanceScreen(
     fun resetForm() {
         selectedCategory = ""
         selectedType = ""
+        amount = ""
         km = ""
         notes = ""
-        cost = ""
         selectedDate = dateFormat.format(Date())
-        editingMaintenanceId = null
-    }
-
-    fun parseCategoryAndType(fullType: String): Pair<String, String> {
-        val idx = fullType.indexOf(" - ")
-        return if (idx == -1) "" to fullType
-        else fullType.substring(0, idx) to fullType.substring(idx + 3)
+        editingExpenseId = null
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
 
-        // ✅ UN SOLO SCROLL: no se rompe la vista
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .background(backgroundGradient)
                 .padding(padding)
-                .padding(horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .navigationBarsPadding(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
             // ==========================
@@ -185,45 +118,33 @@ fun MaintenanceScreen(
             // ==========================
             item {
                 ScreenHeader(
-                    title = "Mantenimientos",
+                    title = "Gastos",
                     onBack = {
                         val popped = navController.popBackStack("home", false)
-                        if (!popped) {
-                            navController.navigate("home") {
-                                popUpTo("home") { inclusive = false }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
+                        if (!popped) navController.navigate("home")
                     }
                 )
-                Spacer(modifier = Modifier.height(12.dp))
             }
 
             // ==========================
-            // FORMULARIO
+            // FORM CARD
             // ==========================
             item {
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = cardColor),
                     elevation = CardDefaults.cardElevation(6.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
 
-                        if (editingMaintenanceId != null) {
+                        if (editingExpenseId != null) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                AssistChip(
-                                    onClick = { /*no-op*/ },
-                                    label = { Text("Editando") }
-                                )
+                                AssistChip(onClick = {}, label = { Text("Editando") })
                                 TextButton(onClick = { resetForm() }) {
                                     Text("Cancelar", color = MyCarBlue)
                                 }
@@ -241,8 +162,8 @@ fun MaintenanceScreen(
                             OutlinedTextField(
                                 value = selectedVehicle?.let { "${it.brand} ${it.model} (${it.plate})" } ?: "",
                                 onValueChange = {},
-                                label = { Text("Seleccionar vehículo") },
                                 readOnly = true,
+                                label = { Text("Seleccionar vehículo") },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expandedVehicle) },
                                 modifier = Modifier.menuAnchor().fillMaxWidth()
                             )
@@ -256,34 +177,16 @@ fun MaintenanceScreen(
                                         text = { Text("${v.brand} ${v.model} (${v.plate})") },
                                         onClick = {
                                             selectedVehicle = v
-                                            km = v.km.toString()
                                             expandedVehicle = false
-
-                                            editingMaintenanceId = null
-                                            userViewModel.loadMaintenanceByVehicle(v.id)
+                                            editingExpenseId = null
+                                            userViewModel.loadExpensesByVehicle(v.id)
                                         }
                                     )
                                 }
                             }
                         }
 
-                        // Tarjeta mini vehículo
-                        selectedVehicle?.let { v ->
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = MyCarBlue.copy(0.08f)),
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(14.dp)
-                            ) {
-                                Column(modifier = Modifier.padding(12.dp)) {
-                                    Text("${v.brand} ${v.model}", color = MyCarBlue, fontWeight = FontWeight.Bold)
-                                    Text("Patente: ${v.plate}", color = Color.Gray)
-                                    Text("KM actual: ${v.km}", color = Color.Gray)
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         // FECHA
                         OutlinedTextField(
@@ -321,7 +224,7 @@ fun MaintenanceScreen(
                                 expanded = expandedCategory,
                                 onDismissRequest = { expandedCategory = false }
                             ) {
-                                maintenanceCategories.keys.forEach { c ->
+                                categories.keys.forEach { c ->
                                     DropdownMenuItem(
                                         text = { Text(c) },
                                         onClick = {
@@ -338,7 +241,7 @@ fun MaintenanceScreen(
 
                         // TIPO
                         var expandedType by remember { mutableStateOf(false) }
-                        val types = maintenanceCategories[selectedCategory] ?: emptyList()
+                        val types = categories[selectedCategory] ?: emptyList()
 
                         ExposedDropdownMenuBox(
                             expanded = expandedType,
@@ -349,9 +252,9 @@ fun MaintenanceScreen(
                                 onValueChange = {},
                                 readOnly = true,
                                 label = { Text("Tipo") },
+                                enabled = selectedCategory.isNotBlank(),
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expandedType) },
-                                modifier = Modifier.menuAnchor().fillMaxWidth(),
-                                enabled = selectedCategory.isNotBlank()
+                                modifier = Modifier.menuAnchor().fillMaxWidth()
                             )
 
                             ExposedDropdownMenu(
@@ -372,27 +275,28 @@ fun MaintenanceScreen(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // KM
-                        MyCarTextField(
-                            value = km,
-                            onValueChange = { km = it.filter { c -> c.isDigit() } },
-                            label = "Kilometraje",
-                            keyboardType = KeyboardType.Number
+                        // MONTO (CLP)
+                        OutlinedTextField(
+                            value = amount,
+                            onValueChange = { amount = it.filter(Char::isDigit) },
+                            label = { Text("Monto (CLP)") },
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                keyboardType = KeyboardType.Number
+                            ),
+                            supportingText = {
+                                Text("Vista previa: ${formatCLP(amount.toIntOrNull() ?: 0)}")
+                            },
+                            modifier = Modifier.fillMaxWidth()
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // COSTO (solo dígitos) + preview CLP
-                        OutlinedTextField(
-                            value = cost,
-                            onValueChange = { cost = it.filter { c -> c.isDigit() } },
-                            label = { Text("Costo (CLP)") },
-                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
-                            supportingText = {
-                                val preview = formatCLP(cost.toIntOrNull() ?: 0)
-                                Text("Vista previa: $preview")
-                            },
-                            modifier = Modifier.fillMaxWidth()
+                        // KM (opcional)
+                        MyCarTextField(
+                            value = km,
+                            onValueChange = { km = it.filter(Char::isDigit) },
+                            label = "Kilometraje (opcional)",
+                            keyboardType = KeyboardType.Number
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -406,14 +310,14 @@ fun MaintenanceScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // CREAR / EDITAR
+                        // BOTÓN AGREGAR / GUARDAR  ✅ (ya no se corta)
                         MyCarButton(
-                            text = if (editingMaintenanceId == null) "Agregar mantenimiento" else "Guardar cambios",
-                            icon = if (editingMaintenanceId == null) Icons.Filled.Add else Icons.Filled.Edit
+                            text = if (editingExpenseId == null) "Agregar gasto" else "Guardar cambios",
+                            icon = if (editingExpenseId == null) Icons.Filled.Add else Icons.Filled.Edit
                         ) {
                             val v = selectedVehicle
+                            val amountInt = amount.toIntOrNull()
                             val kmInt = km.toIntOrNull()
-                            val costInt = cost.toIntOrNull()
 
                             if (v == null) {
                                 scope.launch { snackbarHostState.showSnackbar("Selecciona un vehículo") }
@@ -423,59 +327,51 @@ fun MaintenanceScreen(
                                 scope.launch { snackbarHostState.showSnackbar("Selecciona categoría y tipo") }
                                 return@MyCarButton
                             }
-                            if (kmInt == null) {
-                                scope.launch { snackbarHostState.showSnackbar("Ingresa un kilometraje válido") }
-                                return@MyCarButton
-                            }
-                            if (costInt == null || costInt < 0) {
-                                scope.launch { snackbarHostState.showSnackbar("Ingresa un costo válido") }
+                            if (amountInt == null || amountInt <= 0) {
+                                scope.launch { snackbarHostState.showSnackbar("Ingresa un monto válido") }
                                 return@MyCarButton
                             }
 
-                            val fullType = "$selectedCategory - $selectedType"
-
-                            if (editingMaintenanceId == null) {
-                                userViewModel.createMaintenance(
+                            if (editingExpenseId == null) {
+                                userViewModel.createExpense(
                                     vehicleId = v.id,
                                     vehiclePlate = v.plate,
-                                    type = fullType,
+                                    category = selectedCategory,
+                                    type = selectedType,
                                     date = selectedDate,
+                                    amount = amountInt,
                                     km = kmInt,
-                                    notes = notes.ifBlank { null },
-                                    cost = costInt
+                                    notes = notes.ifBlank { null }
                                 ) { success ->
                                     scope.launch {
                                         if (success) {
-                                            snackbarHostState.showSnackbar("Mantenimiento agregado")
-                                            userViewModel.loadMaintenanceByVehicle(v.id)
-                                            selectedCategory = ""
-                                            selectedType = ""
-                                            notes = ""
-                                            cost = ""
-                                            selectedDate = dateFormat.format(Date())
+                                            snackbarHostState.showSnackbar("Gasto agregado")
+                                            userViewModel.loadExpensesByVehicle(v.id)
+                                            resetForm()
                                         } else {
-                                            snackbarHostState.showSnackbar("Error al agregar mantenimiento")
+                                            snackbarHostState.showSnackbar("Error al agregar gasto")
                                         }
                                     }
                                 }
                             } else {
-                                userViewModel.updateMaintenance(
-                                    id = editingMaintenanceId!!,
+                                userViewModel.updateExpense(
+                                    id = editingExpenseId!!,
                                     vehicleId = v.id,
                                     vehiclePlate = v.plate,
-                                    type = fullType,
+                                    category = selectedCategory,
+                                    type = selectedType,
                                     date = selectedDate,
+                                    amount = amountInt,
                                     km = kmInt,
-                                    notes = notes.ifBlank { null },
-                                    cost = costInt
+                                    notes = notes.ifBlank { null }
                                 ) { success ->
                                     scope.launch {
                                         if (success) {
-                                            snackbarHostState.showSnackbar("Mantenimiento actualizado")
-                                            userViewModel.loadMaintenanceByVehicle(v.id)
+                                            snackbarHostState.showSnackbar("Gasto actualizado")
+                                            userViewModel.loadExpensesByVehicle(v.id)
                                             resetForm()
                                         } else {
-                                            snackbarHostState.showSnackbar("Error al actualizar mantenimiento")
+                                            snackbarHostState.showSnackbar("Error al actualizar gasto")
                                         }
                                     }
                                 }
@@ -484,8 +380,9 @@ fun MaintenanceScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
+                        // BOTÓN HISTORIAL ✅
                         ElevatedButton(
-                            onClick = { navController.navigate("maintenanceHistory") },
+                            onClick = { navController.navigate("expenseHistory") },
                             shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(MyCarBlue),
                             modifier = Modifier.fillMaxWidth()
@@ -496,8 +393,6 @@ fun MaintenanceScreen(
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
             }
 
             // ==========================
@@ -505,119 +400,93 @@ fun MaintenanceScreen(
             // ==========================
             item {
                 Text(
-                    text = "Mantenimientos del vehículo:",
-                    color = Color.Black,
+                    text = "Gastos del vehículo:",
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp)
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(8.dp))
             }
 
             // ==========================
-            // ESTADOS
+            // ESTADOS / LISTA
             // ==========================
             when {
                 selectedVehicle == null -> {
                     item {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                             Text("Selecciona un vehículo.", color = Color.Gray)
                         }
-                        Spacer(modifier = Modifier.height(80.dp))
                     }
                 }
 
-                maintenanceList.isEmpty() -> {
+                expenseList.isEmpty() -> {
                     item {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("No hay mantenimientos para este vehículo.", color = Color.Gray)
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            Text("No hay gastos para este vehículo.", color = Color.Gray)
                         }
-                        Spacer(modifier = Modifier.height(80.dp))
                     }
                 }
 
                 else -> {
-                    items(maintenanceList.size) { index ->
-                        val record = maintenanceList[index]
+                    items(expenseList.size) { index ->
+                        val r = expenseList[index]
 
                         Card(
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(cardColor),
                             elevation = CardDefaults.cardElevation(4.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 6.dp)
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
+                            Column(Modifier.padding(16.dp)) {
 
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        record.type,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MyCarBlue
-                                    )
-
-                                    AssistChip(
-                                        onClick = { /* no-op */ },
-                                        label = { Text("${record.km} km") }
-                                    )
+                                    Text("${r.category} - ${r.type}", fontWeight = FontWeight.Bold, color = MyCarBlue)
+                                    AssistChip(onClick = {}, label = { Text(formatCLP(r.amount)) })
                                 }
 
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text("Fecha: ${record.date}", color = Color.Gray)
-                                Text("Costo: ${formatCLP(record.cost)}", color = Color.Gray)
+                                Spacer(Modifier.height(6.dp))
+                                Text("Fecha: ${r.date}", color = Color.Gray)
+                                if (r.km != null) Text("KM: ${r.km}", color = Color.Gray)
 
-                                if (!record.notes.isNullOrBlank()) {
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    Text("Notas: ${record.notes}", color = Color.DarkGray)
+                                if (!r.notes.isNullOrBlank()) {
+                                    Spacer(Modifier.height(6.dp))
+                                    Text("Notas: ${r.notes}", color = Color.DarkGray)
                                 }
 
-                                Spacer(modifier = Modifier.height(10.dp))
+                                Spacer(Modifier.height(10.dp))
 
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.End,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     TextButton(onClick = {
-                                        editingMaintenanceId = record.id
-
-                                        val (cat, typ) = parseCategoryAndType(record.type)
-                                        selectedCategory = cat
-                                        selectedType = typ
-
-                                        km = record.km.toString()
-                                        notes = record.notes ?: ""
-                                        cost = record.cost.toString()
-                                        selectedDate = record.date
-
+                                        editingExpenseId = r.id
+                                        selectedCategory = r.category
+                                        selectedType = r.type
+                                        selectedDate = r.date
+                                        amount = r.amount.toString()
+                                        km = r.km?.toString() ?: ""
+                                        notes = r.notes ?: ""
                                         scope.launch { snackbarHostState.showSnackbar("Editando...") }
                                     }) {
                                         Icon(Icons.Filled.Edit, null, tint = MyCarBlue)
-                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Spacer(Modifier.width(6.dp))
                                         Text("Editar", color = MyCarBlue)
                                     }
 
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Spacer(Modifier.width(6.dp))
 
                                     TextButton(onClick = {
-                                        userViewModel.deleteMaintenanceApi(record.id) { success ->
+                                        userViewModel.deleteExpenseApi(r.id) { ok ->
                                             scope.launch {
-                                                if (success) {
+                                                if (ok) {
                                                     snackbarHostState.showSnackbar("Eliminado")
-                                                    if (editingMaintenanceId == record.id) resetForm()
-                                                    selectedVehicle?.let { userViewModel.loadMaintenanceByVehicle(it.id) }
+                                                    if (editingExpenseId == r.id) resetForm()
+                                                    selectedVehicle?.let { userViewModel.loadExpensesByVehicle(it.id) }
                                                 } else {
                                                     snackbarHostState.showSnackbar("Error al eliminar")
                                                 }
@@ -625,17 +494,18 @@ fun MaintenanceScreen(
                                         }
                                     }) {
                                         Icon(Icons.Filled.Delete, null, tint = MyCarRed)
-                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Spacer(Modifier.width(6.dp))
                                         Text("Eliminar", color = MyCarRed)
                                     }
                                 }
                             }
                         }
                     }
-
-                    item { Spacer(modifier = Modifier.height(90.dp)) }
                 }
             }
+
+            // espacio final para que no lo tape la bottom bar
+            item { Spacer(modifier = Modifier.height(12.dp)) }
         }
     }
 }

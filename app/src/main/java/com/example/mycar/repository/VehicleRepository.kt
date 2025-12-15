@@ -16,6 +16,9 @@ class VehicleRepository {
         return api.createVehicle(request)
     }
 
+    suspend fun update(id: Long, request: VehicleRequest) =
+        api.updateVehicle(id, request)
+
     suspend fun delete(id: Long) {
         return api.deleteVehicle(id)
     }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -24,7 +25,6 @@ import com.example.mycar.UserViewModel
 import com.example.mycar.network.dto.VehicleResponse
 import com.example.mycar.ui.theme.*
 import com.example.mycar.components.*
-
 
 import java.text.SimpleDateFormat
 import java.util.*
@@ -56,6 +56,9 @@ fun ManageVehicleScreen(
 
     var showDeleteDialog by remember { mutableStateOf(false) }
     var vehicleToDelete by remember { mutableStateOf<VehicleResponse?>(null) }
+
+    // ID del vehículo que se está editando (null = modo agregar)
+    var editingVehicleId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     LaunchedEffect(Unit) {
         userViewModel.loadVehicles()
@@ -250,7 +253,7 @@ fun ManageVehicleScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // FECHAS
+                    // FECHA SOAP
                     OutlinedTextField(
                         value = soapDate,
                         onValueChange = {},
@@ -266,6 +269,7 @@ fun ManageVehicleScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    // FECHA PERMISO
                     OutlinedTextField(
                         value = permisoDate,
                         onValueChange = {},
@@ -281,6 +285,7 @@ fun ManageVehicleScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    // FECHA REVISIÓN
                     OutlinedTextField(
                         value = revisionDate,
                         onValueChange = {},
@@ -296,8 +301,11 @@ fun ManageVehicleScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // BOTÓN AGREGAR
-                    MyCarButton(text = "Agregar vehículo", icon = Icons.Filled.Add) {
+                    // BOTÓN AGREGAR / EDITAR
+                    val buttonText =
+                        if (editingVehicleId == null) "Agregar vehículo" else "Guardar cambios"
+
+                    MyCarButton(text = buttonText, icon = Icons.Filled.Add) {
 
                         if (
                             brand.isNotBlank() &&
@@ -310,31 +318,65 @@ fun ManageVehicleScreen(
                             revisionDate.isNotBlank()
                         ) {
 
-                            userViewModel.createVehicle(
-                                brand,
-                                model,
-                                year.toInt(),
-                                plate,
-                                km.toInt(),
-                                soapDate,
-                                permisoDate,
-                                revisionDate
-                            ) { success ->
-                                if (success) {
-                                    message = "Vehículo agregado correctamente"
-                                    isSuccess = true
+                            if (editingVehicleId == null) {
+                                // MODO CREAR
+                                userViewModel.createVehicle(
+                                    brand,
+                                    model,
+                                    year.toInt(),
+                                    plate,
+                                    km.toInt(),
+                                    soapDate,
+                                    permisoDate,
+                                    revisionDate
+                                ) { success ->
+                                    if (success) {
+                                        message = "Vehículo agregado correctamente"
+                                        isSuccess = true
 
-                                    brand = ""
-                                    model = ""
-                                    year = ""
-                                    plate = ""
-                                    km = ""
-                                    soapDate = ""
-                                    permisoDate = ""
-                                    revisionDate = ""
-                                } else {
-                                    message = "Error al agregar vehículo"
-                                    isSuccess = false
+                                        brand = ""
+                                        model = ""
+                                        year = ""
+                                        plate = ""
+                                        km = ""
+                                        soapDate = ""
+                                        permisoDate = ""
+                                        revisionDate = ""
+                                    } else {
+                                        message = "Error al agregar vehículo"
+                                        isSuccess = false
+                                    }
+                                }
+                            } else {
+                                // MODO EDITAR
+                                userViewModel.updateVehicle(
+                                    id = editingVehicleId!!,
+                                    brand = brand,
+                                    model = model,
+                                    year = year.toInt(),
+                                    plate = plate,
+                                    km = km.toInt(),
+                                    soap = soapDate,
+                                    permiso = permisoDate,
+                                    revision = revisionDate
+                                ) { success ->
+                                    if (success) {
+                                        message = "Vehículo actualizado correctamente"
+                                        isSuccess = true
+
+                                        editingVehicleId = null
+                                        brand = ""
+                                        model = ""
+                                        year = ""
+                                        plate = ""
+                                        km = ""
+                                        soapDate = ""
+                                        permisoDate = ""
+                                        revisionDate = ""
+                                    } else {
+                                        message = "Error al actualizar vehículo"
+                                        isSuccess = false
+                                    }
                                 }
                             }
 
@@ -384,13 +426,34 @@ fun ManageVehicleScreen(
 
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            TextButton(onClick = {
-                                vehicleToDelete = v
-                                showDeleteDialog = true
-                            }) {
-                                Icon(Icons.Filled.Delete, null, tint = MyCarRed)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Eliminar", color = MyCarRed)
+                            Row {
+                                // BOTÓN EDITAR
+                                TextButton(onClick = {
+                                    editingVehicleId = v.id
+                                    brand = v.brand
+                                    model = v.model
+                                    year = v.year.toString()
+                                    plate = v.plate
+                                    km = v.km.toString()
+                                    soapDate = v.soapDate
+                                    permisoDate = v.permisoCirculacionDate
+                                    revisionDate = v.revisionTecnicaDate
+                                }) {
+                                    Icon(Icons.Filled.Edit, null, tint = MyCarBlue)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Editar", color = MyCarBlue)
+                                }
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                TextButton(onClick = {
+                                    vehicleToDelete = v
+                                    showDeleteDialog = true
+                                }) {
+                                    Icon(Icons.Filled.Delete, null, tint = MyCarRed)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Eliminar", color = MyCarRed)
+                                }
                             }
                         }
                     }

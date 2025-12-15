@@ -6,21 +6,20 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.mycar.models.MaintenanceRecord
-import com.example.mycar.models.AlertRecord
-import com.example.mycar.network.dto.VehicleRequest
-import com.example.mycar.network.dto.VehicleResponse
+import com.example.mycar.network.dto.*
 import com.example.mycar.repository.AuthRepository
 import com.example.mycar.repository.VehicleRepository
+import com.example.mycar.repository.MaintenanceRepository
+import com.example.mycar.repository.ExpenseRepository
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
 
 class UserViewModel(application: Application) : AndroidViewModel(application) {
 
     // ========= REPOSITORIOS =========
     private val authRepository = AuthRepository()
     private val vehicleRepository = VehicleRepository()
+    private val maintenanceRepository = MaintenanceRepository()
+    private val expenseRepository = ExpenseRepository()
 
     // ========= DATOS USUARIO =========
     var userId = mutableStateOf<Long?>(null)
@@ -36,12 +35,11 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
     // ========= VEHÍCULOS (desde API) =========
     var vehicles = mutableStateListOf<VehicleResponse>()
 
-    // ========= MANTENIMIENTO LOCAL =========
-    var maintenanceList = mutableStateListOf<MaintenanceRecord>()
+    // ========= MANTENIMIENTO DESDE API =========
+    var maintenanceApiList = mutableStateListOf<MaintenanceResponse>()
 
-    // ========= ALERTAS LOCALES =========
-    var alerts = mutableStateListOf<AlertRecord>()
-
+    // ========= EXPENSE DESDE API =========
+    var expenseApiList = mutableStateListOf<ExpenseResponse>()
 
     // =====================================================================
     //                                AUTH
@@ -103,11 +101,10 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
         isLoggedIn.value = false
 
         vehicles.clear()
-        maintenanceList.clear()
-        alerts.clear()
+        maintenanceApiList.clear()
+        expenseApiList.clear()
         profilePhoto.value = null
     }
-
 
     // =====================================================================
     //                             VEHICLES API
@@ -157,7 +154,49 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
                 vehicles.add(created)
 
                 onResult(true)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onResult(false)
+            }
+        }
+    }
 
+    fun updateVehicle(
+        id: Long,
+        brand: String,
+        model: String,
+        year: Int,
+        plate: String,
+        km: Int,
+        soap: String,
+        permiso: String,
+        revision: String,
+        onResult: (Boolean) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val user = userId.value ?: return@launch
+
+                val request = VehicleRequest(
+                    brand = brand,
+                    model = model,
+                    year = year,
+                    plate = plate,
+                    km = km,
+                    soapDate = soap,
+                    permisoCirculacionDate = permiso,
+                    revisionTecnicaDate = revision,
+                    userId = user
+                )
+
+                val updated = vehicleRepository.update(id, request)
+
+                val index = vehicles.indexOfFirst { it.id == id }
+                if (index != -1) {
+                    vehicles[index] = updated
+                }
+
+                onResult(true)
             } catch (e: Exception) {
                 e.printStackTrace()
                 onResult(false)
@@ -178,59 +217,213 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-
     // =====================================================================
-    //                             ALERTAS LOCALES
-    // =====================================================================
-
-    fun loadAlerts() {
-        // puedes cargar desde BD si más adelante quieres
-    }
-
-    fun removeAlert(alert: AlertRecord) {
-        alerts.remove(alert)
-    }
-
-    fun addAlert(title: String, message: String) {
-        alerts.add(
-            AlertRecord(
-                title = title,
-                message = message,
-                date = getTodayDate()
-            )
-        )
-    }
-
-
-    // =====================================================================
-    //                      MANTENIMIENTO LOCAL (NO API)
+    //                        MANTENIMIENTO - API
     // =====================================================================
 
-    fun addMaintenance(record: MaintenanceRecord) {
-        maintenanceList.add(record)
+    fun loadMaintenanceByVehicle(vehicleId: Long) {
+        viewModelScope.launch {
+            try {
+                val list = maintenanceRepository.listByVehicle(vehicleId)
+                maintenanceApiList.clear()
+                maintenanceApiList.addAll(list)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
-    fun removeMaintenance(record: MaintenanceRecord) {
-        maintenanceList.remove(record)
+    fun createMaintenance(
+        vehicleId: Long,
+        vehiclePlate: String,
+        type: String,
+        date: String,
+        km: Int,
+        notes: String?,
+        cost: Int,
+        onResult: (Boolean) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val request = MaintenanceRequest(
+                    vehicleId = vehicleId,
+                    vehiclePlate = vehiclePlate,
+                    type = type,
+                    date = date,
+                    km = km,
+                    notes = notes,
+                    cost = cost
+                )
+
+                val created = maintenanceRepository.create(request)
+
+                maintenanceApiList.add(0, created)
+
+                onResult(true)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onResult(false)
+            }
+        }
     }
 
+    fun updateMaintenance(
+        id: Long,
+        vehicleId: Long,
+        vehiclePlate: String,
+        type: String,
+        date: String,
+        km: Int,
+        notes: String?,
+        cost: Int,
+        onResult: (Boolean) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val request = MaintenanceRequest(
+                    vehicleId = vehicleId,
+                    vehiclePlate = vehiclePlate,
+                    type = type,
+                    date = date,
+                    km = km,
+                    notes = notes,
+                    cost = cost
+                )
+
+                val updated = maintenanceRepository.update(id, request)
+
+                val index = maintenanceApiList.indexOfFirst { it.id == id }
+                if (index != -1) {
+
+                    maintenanceApiList.removeAt(index)
+                    maintenanceApiList.add(0, updated)
+                }
+
+                onResult(true)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onResult(false)
+            }
+        }
+    }
+
+    fun deleteMaintenanceApi(id: Long, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                maintenanceRepository.delete(id)
+                maintenanceApiList.removeAll { it.id == id }
+                onResult(true)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onResult(false)
+            }
+        }
+    }
 
     // =====================================================================
-    //                                UTILIDADES
+    //                            EXPENSE - API
     // =====================================================================
 
-    private fun getTodayDate(): String {
-        return SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+    fun loadExpensesByVehicle(vehicleId: Long) {
+        viewModelScope.launch {
+            try {
+                val list = expenseRepository.listByVehicle(vehicleId)
+                expenseApiList.clear()
+                expenseApiList.addAll(list)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
-    private fun daysUntil(date: String): Int {
-        return try {
-            val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-            val target = sdf.parse(date)
-            val now = Date()
-            ((target.time - now.time) / (1000 * 60 * 60 * 24)).toInt()
-        } catch (e: Exception) {
-            Int.MAX_VALUE
+    fun createExpense(
+        vehicleId: Long,
+        vehiclePlate: String,
+        category: String,
+        type: String,
+        date: String,
+        amount: Int,
+        km: Int?,
+        notes: String?,
+        onResult: (Boolean) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val request = ExpenseRequest(
+                    vehicleId = vehicleId,
+                    vehiclePlate = vehiclePlate,
+                    category = category,
+                    type = type,
+                    date = date,
+                    amount = amount,
+                    km = km,
+                    notes = notes
+                )
+
+                val created = expenseRepository.create(request)
+
+                expenseApiList.add(0, created)
+
+                onResult(true)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onResult(false)
+            }
+        }
+    }
+
+    fun updateExpense(
+        id: Long,
+        vehicleId: Long,
+        vehiclePlate: String,
+        category: String,
+        type: String,
+        date: String,
+        amount: Int,
+        km: Int?,
+        notes: String?,
+        onResult: (Boolean) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val request = ExpenseRequest(
+                    vehicleId = vehicleId,
+                    vehiclePlate = vehiclePlate,
+                    category = category,
+                    type = type,
+                    date = date,
+                    amount = amount,
+                    km = km,
+                    notes = notes
+                )
+
+                val updated = expenseRepository.update(id, request)
+
+                val index = expenseApiList.indexOfFirst { it.id == id }
+                if (index != -1) {
+
+                    expenseApiList.removeAt(index)
+                    expenseApiList.add(0, updated)
+                }
+
+                onResult(true)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onResult(false)
+            }
+        }
+    }
+
+    fun deleteExpenseApi(id: Long, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                expenseRepository.delete(id)
+                expenseApiList.removeAll { it.id == id }
+                onResult(true)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onResult(false)
+            }
         }
     }
 }
